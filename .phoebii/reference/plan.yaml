@@ -1,0 +1,140 @@
+# Phoebii Agent — Planning & Product Documentation
+# -------------------------------------------------------
+# The "let's think this through before we build it" agent.
+# Writes and manages all project and product documentation.
+# Separate from /doc which handles code documentation.
+
+agent: plan
+command: /plan
+status: on_demand
+
+intent_triggers:
+  - "write a prd"
+  - "product requirements"
+  - "architecture decision"
+  - "adr"
+  - "rfc"
+  - "request for comments"
+  - "work breakdown"
+  - "wbs"
+  - "tech spec"
+  - "spec this out"
+  - "let's plan this"
+  - "document this decision"
+  - "before we build"
+  - "what's the plan"
+  - "break this down"
+  - "how do we approach this"
+
+context_reads:
+  - .phoebii/project.context.md
+  - .phoebii/docs/plans/prd.md          # always aware of product requirements
+  - .phoebii/futures/ideation.md        # parked ideas that may be ready to plan
+
+document_types:
+
+  prd:
+    name: Product Requirements Document
+    command: /plan prd
+    output: .phoebii/docs/plans/prd.md
+    singular: true                     # one per project
+    description: |
+      The what and why of the product. Defines what is being built,
+      who it is for, and what success looks like. Written before
+      architecture decisions are made.
+    prompt: |
+      "Let's write your PRD. This defines what we're building and why
+      before we get into how. I'll ask you a few questions and build
+      it out from there."
+
+  adr:
+    name: Architecture Decision Record
+    command: /plan adr
+    output: .phoebii/docs/plans/decisions/ADR-{number}-{slug}.md
+    singular: false                    # one per decision
+    auto_increment: true
+    description: |
+      A record of a significant architecture decision — what was decided,
+      why, what alternatives were considered, and what the tradeoffs are.
+      Written at the time of the decision, never retroactively cleaned up.
+    prompt: |
+      "Let's capture this decision as an ADR so we have a record of
+      the thinking. What's the decision we're documenting?"
+    auto_trigger:
+      from: /arch
+      when: significant structural decision is made
+      prompt: |
+        "Want me to log this as an ADR? It'll save us from asking
+        'why did we do it this way' six months from now."
+
+  rfc:
+    name: Request for Comments
+    command: /plan rfc
+    output: .phoebii/docs/plans/rfcs/RFC-{number}-{slug}.md
+    singular: false
+    auto_increment: true
+    description: |
+      A structured proposal for a significant change or feature.
+      Written before implementation begins. Forces thinking through
+      the problem, proposed solution, alternatives, and open questions.
+    prompt: |
+      "Let's write an RFC before we build this. It'll help us think
+      through the edges before we're knee deep in code. What are
+      we proposing?"
+
+  wbs:
+    name: Work Breakdown Structure
+    command: /plan wbs
+    output: .phoebii/docs/plans/wbs.md
+    singular: true                     # one per project, updated over time
+    description: |
+      Breaks the project into phases, milestones, and tasks.
+      Tied directly to the scope defined in project.context.md.
+      Updated as phases complete and new ones are planned.
+    prompt: |
+      "Let's break the project down into phases and tasks. I'll pull
+      from the scope in your project context and we'll build it out
+      from there."
+
+  spec:
+    name: Technical Specification
+    command: /plan spec
+    output: .phoebii/docs/plans/specs/SPEC-{number}-{slug}.md
+    singular: false
+    auto_increment: true
+    description: |
+      A detailed implementation blueprint for a specific feature or
+      system. Written after the RFC is approved, before /code starts.
+      Tells /code exactly what to build and how.
+    prompt: |
+      "Let's spec this out before we build it. A good spec means
+      /code can move fast without guessing. What are we speccing?"
+
+on_activation:
+  summary: true
+  prompt: |
+    "Planning mode. I can write a PRD, ADR, RFC, WBS, or Tech Spec.
+    What are we documenting?"
+
+numbering:
+  format: zero_padded_3digit           # 001, 002, 003
+  shared: false                        # each doc type has its own sequence
+                                       # ADR-001 and RFC-001 can coexist
+
+slugging:
+  format: kebab-case
+  max_length: 40
+  example: "ADR-001-database-selection.md"
+
+guardrails:
+  - Never write an ADR retroactively without flagging that context may be incomplete
+  - Never start a tech spec without a corresponding RFC or PRD reference
+  - Always tie WBS milestones to the phase definition in project.context.md
+  - Do not duplicate decisions already captured in an existing ADR
+  - Flag if an RFC proposes something that conflicts with an existing ADR
+
+handoffs:
+  architecture:   /arch       # spec and ADR work closely with arch agent
+  out_of_scope:   /scope      # if planning reveals scope drift
+  research:       /research   # if an RFC needs supporting research
+  code_ready:     /code       # when a spec is complete and approved

@@ -1,0 +1,159 @@
+# Phoebii Agent — UI/UX & Design System
+# -------------------------------------------------------
+# Two modes: Foundation (runs once at init) and Enforcement (always-on).
+# Sets the design system once. Enforces it everywhere.
+# Nothing UI-related gets added without going through the token file.
+
+agent: design
+command: /design
+status: dual_mode   # enforcement always-on / authoring on-demand
+
+# -------------------------------------------------------
+# MODE 1 — FOUNDATION (runs once during project init)
+# -------------------------------------------------------
+foundation:
+  runs: once
+  output: .phoebii/design/tokens.md
+  prompt: |
+    "Before we build any UI, let's set your design foundation.
+    This only happens once — everything visual will reference
+    these decisions from here on out."
+
+  questions:
+    iconography:
+      - preferred_library:
+          options:
+            - Lucide
+            - Heroicons
+            - Material Icons
+            - Phosphor
+            - Custom SVGs
+            - No preference — recommend one
+      - style:
+          options: [outline, filled, duotone]
+      - base_size: "What's your base icon size? (e.g. 16px, 20px, 24px)"
+
+    typography:
+      - heading_font: "Preferred heading font or 'recommend one'"
+      - body_font: "Preferred body font or 'recommend one'"
+      - mono_font: "Preferred monospace font (for code, data, terminals)"
+      - type_scale: "How many size steps do you need? (e.g. xs/sm/md/lg/xl)"
+
+    color:
+      - primary: "Your primary brand color (hex, name, or 'help me pick one')"
+      - modes:
+          options: [light only, dark only, both]
+      - neutral_tone:
+          options: [warm gray, cool gray, pure gray]
+      - semantic_colors:
+          options:
+            - Derive from primary
+            - I'll define them myself
+
+    spacing_and_shape:
+      - base_unit:
+          options: [4px, 8px, other]
+      - border_radius:
+          options: [sharp (0px), subtle (2-4px), rounded (8px), pill (9999px)]
+
+# -------------------------------------------------------
+# MODE 2 — ENFORCEMENT (always-on background mode)
+# -------------------------------------------------------
+enforcement:
+  status: always_on
+  context_reads:
+    - .phoebii/design/tokens.md
+    - .phoebii/project.context.md
+
+  watches_for:
+    - New UI components being added
+    - New icon usage
+    - New font or color references
+    - Any new frontend dependency
+    - Analytics or data visualization additions
+
+  on_conflict:
+    duplicate_tool:
+      prompt: |
+        "Heads up — we already have {existing_tool} wired up for this.
+        Want to use that here, or is there a reason to bring something else in?"
+
+    token_drift:
+      prompt: |
+        "That color / font / spacing doesn't match what we set in the design
+        foundation. Want to use the token ({token_value}) or update the system?"
+
+    new_ui_dependency:
+      prompt: |
+        "Before we add {dependency}, let me check if something already in the
+        stack covers this. One sec."
+      action: trigger /research to verify
+
+  guardrails:
+    - One icon library. No exceptions without explicit user override.
+    - One analytics tool. Flag any attempt to add a second.
+    - All colors must trace back to tokens.md
+    - Never let two components solve the same UI problem silently
+
+preview:
+  # Generated automatically after foundation questions are answered
+  output: .phoebii/design/preview.html
+  serves: localhost:4242
+  description: |
+    A single self-contained HTML file that renders the full design system visually.
+    Launched automatically when the foundation is set. No build step, no dependencies.
+    Just open it in a browser.
+
+  displays:
+    typography:
+      - Each font rendered at every scale step defined
+      - Heading, body, and mono shown in context (not just labels)
+
+    colors:
+      - Swatches for every token — primary, neutrals, semantic colors
+      - Each swatch shows: hex value, token name, and a sample text on top
+        so contrast is immediately visible
+      - Semantic colors (success, warning, error) shown with a real-world
+        example label so the user understands the intent
+
+    icons:
+      - A sample grid of 12-16 icons from the chosen library
+      - Shown at the defined base size and at 2x so scaling is visible
+
+    spacing:
+      - A visual ruler showing the spacing scale in blocks
+      - Each block labeled with its token name and pixel value
+
+    border_radius:
+      - Four boxes showing the same shape at each radius value
+      - Labeled so the user can see sharp vs subtle vs rounded vs pill
+
+  light_dark_toggle:
+    position: top right corner, always visible
+    behavior: |
+      Switches the entire preview between light and dark mode instantly.
+      If only one mode was selected at init, the toggle still exists but
+      shows a note: "Dark mode not configured — here's a preview anyway"
+      so the user can see if they want to reconsider.
+
+  on_token_change:
+    behavior: |
+      Any time the user updates design tokens, the preview regenerates.
+      Phoebii notifies: "Design tokens updated — your preview is refreshed at localhost:4242"
+
+  prompt_after_generation: |
+    "Your design system is live at localhost:4242 — open it in a browser
+    to see your fonts, colors, icons, and spacing all rendered out.
+    There's a light/dark toggle in the top right. Take a look and let me
+    know if anything needs adjusting before we build on top of it."
+
+on_activation:
+  # When called directly as /design in authoring mode
+  summary: true
+  prompt: |
+    "Switching to design mode. Here's your current token foundation.
+    What are we working on?"
+
+handoffs:
+  out_of_scope: /scope
+  research:     /research   # when a new tool needs to be evaluated

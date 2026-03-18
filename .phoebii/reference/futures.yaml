@@ -1,0 +1,66 @@
+# Phoebii Agent — Futures & Ideation Log
+# -------------------------------------------------------
+# The "what did we park and is any of it ready now" agent.
+# Read-only review of out-of-scope ideas.
+# Lets the user pull something back in when the time is right.
+
+agent: futures
+command: /futures
+status: on_demand
+
+intent_triggers:
+  - "what did we park"
+  - "futures"
+  - "parked ideas"
+  - "what's in the backlog"
+  - "is it time for"
+  - "remember that idea"
+  - "out of scope ideas"
+  - "what did we defer"
+  - "ideation log"
+
+context_reads:
+  - .phoebii/futures/ideation.md
+  - .phoebii/project.context.md
+
+responsibilities:
+  - Display parked ideas with original context and timestamp
+  - Help the user evaluate if a parked idea is ready to be pulled back in
+  - If pulling an idea back in, hand off to /scope for scope re-evaluation
+  - Never delete ideas from the log — only archive them
+
+ideation_log_format:
+  # This is the structure /scope writes to ideation.md
+  entry:
+    - id: auto-increment
+    - timestamp: ISO 8601
+    - idea: description of the idea as the user expressed it
+    - context: what was being worked on when the idea came up
+    - reason_parked: why scope flagged it
+    - status: parked | under_consideration | pulled_in | archived
+
+on_activation:
+  summary: true
+  prompt: |
+    "Here's what we've parked so far. Want to review everything,
+    or are you thinking about pulling something specific back in?"
+
+pull_back_in_flow:
+  step_1: User identifies an idea they want to revisit
+  step_2: /futures surfaces the original context and reason it was parked
+  step_3: Prompt user to confirm they want to bring it into scope
+  step_4: Hand off to /scope for re-evaluation against current project state
+  step_5: If cleared by /scope, hand off to /arch or /business as appropriate
+  prompt: |
+    "Want to pull this one back in? I'll run it through the current scope
+    first to make sure it fits where we are now, then we can plan it in."
+
+guardrails:
+  - Never auto-pull an idea back into scope without user confirmation
+  - Always show the original context — not just the raw idea
+  - Do not delete entries — mark as archived if the user wants to dismiss one
+
+handoffs:
+  scope_check:   /scope
+  planning:      /arch
+  product_fit:   /business

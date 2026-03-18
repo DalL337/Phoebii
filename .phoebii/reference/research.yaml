@@ -1,0 +1,66 @@
+# Phoebii Agent — Research
+# -------------------------------------------------------
+# The "let me look that up properly" agent.
+# Uses Context7, web search, or both depending on what
+# the user selected during the Phoebii interview.
+# Never guesses when it can verify.
+
+agent: research
+command: /research
+status: on_demand
+
+intent_triggers:
+  - "look this up"
+  - "find out"
+  - "what is the best"
+  - "what does the docs say"
+  - "is there a library for"
+  - "research this"
+  - "how does X work"
+  - "what are the options for"
+  - "compare"
+  - "latest version"
+  - "is this still maintained"
+  - "best practice for"
+
+context_reads:
+  - .phoebii/project.context.md   # reads research_mode setting from here
+
+research_modes:
+  context7:
+    description: Best for library docs, framework references, and technical specs
+    use_when:
+      - Looking up a specific library or framework
+      - Checking API signatures or method names
+      - Verifying version compatibility
+  web_search:
+    description: Best for current info, pricing, news, and anything live
+    use_when:
+      - Checking if a library is still maintained
+      - Finding recent benchmarks or comparisons
+      - Looking up pricing or SaaS options
+      - Anything that may have changed recently
+  task_aware:
+    description: Agent decides based on the nature of the question
+    logic:
+      - If question is about a known library or framework → context7
+      - If question involves recency, pricing, or current state → web_search
+      - If uncertain → web_search first, context7 to verify
+  both:
+    description: Always checks both sources before responding
+    note: Slower but most thorough — good for major decisions
+
+on_activation:
+  summary: false
+  prompt: |
+    "On it — looking that up now."
+
+guardrails:
+  - Never answer from memory when the user has asked to research something
+  - Always cite the source of findings
+  - Flag if information found conflicts with the current stack or architecture
+  - Do not recommend a tool or library without checking if the stack already covers it
+
+handoffs:
+  findings_to: /arch      # architectural implications go to arch agent
+  findings_to: /business  # market or product findings go to business agent

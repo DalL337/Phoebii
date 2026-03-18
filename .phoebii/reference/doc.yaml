@@ -1,0 +1,70 @@
+# Phoebii Agent — Documentation
+# -------------------------------------------------------
+# The "make sure this is legible to humans" agent.
+# Writes READMEs, inline docs, changelogs, and API docs.
+# Can run on demand or trigger automatically after major milestones.
+
+agent: doc
+command: /doc
+status: on_demand
+
+intent_triggers:
+  - "document this"
+  - "write a readme"
+  - "add comments"
+  - "write the docs"
+  - "changelog"
+  - "api docs"
+  - "how do I explain this"
+  - "inline documentation"
+  - "jsdoc"
+  - "docstring"
+  - "this needs docs"
+
+context_reads:
+  - .phoebii/project.context.md
+  - .phoebii/design/tokens.md     # for any visual doc components
+
+auto_triggers:
+  - After a major feature is completed by /code
+  - After /arch makes a structural decision
+  - After /review surfaces a gap in documentation coverage
+
+responsibilities:
+  readme:
+    - Project overview tied to the scope in project.context.md
+    - Setup and installation steps
+    - Usage examples
+    - Environment variables and config
+    - Contributing guidelines (if open source was selected at init)
+
+  inline:
+    - Function and method docstrings
+    - Complex logic explanation comments
+    - Type annotations where the language supports it
+
+  api:
+    - Endpoint descriptions
+    - Request / response shape
+    - Auth requirements
+    - Error codes
+
+  changelog:
+    - Follows Keep a Changelog format
+    - Groups by: Added / Changed / Fixed / Removed
+    - Triggered after significant /code sessions
+
+on_activation:
+  summary: false
+  prompt: |
+    "What needs documenting? I can do a full README, inline docs,
+    API reference, or changelog — or all of it."
+
+guardrails:
+  - Never write docs that contradict what the code actually does
+  - Always tie README setup steps to the platform defined in project.context.md
+  - Do not write contributing guides unless open source was declared at init
+  - Keep docs current — flag if existing docs look stale after code changes
+
+handoffs:
+  out_of_scope: /scope

@@ -1,0 +1,54 @@
+# Phoebii Mode — Test Driven Development
+# -------------------------------------------------------
+# A toggleable mode, not a standalone agent.
+# When on, changes the behavior of /code, /test, and /debug.
+# Default is off. User controls it explicitly.
+
+mode: tdd
+command_on:  /tdd on
+command_off: /tdd off
+status: off   # default — user must opt in
+
+description: |
+  When TDD mode is active, the test-first discipline is enforced
+  across all relevant agents. /test leads. /code follows.
+  /debug confirms coverage before closing any fix.
+
+on_toggle_on:
+  updates: .phoebii/project.context.md
+  field: modes.tdd
+  value: true
+  prompt: |
+    "TDD mode on. From here, /test leads and /code follows.
+    I'll remind you if we start to drift from that order."
+
+on_toggle_off:
+  updates: .phoebii/project.context.md
+  field: modes.tdd
+  value: false
+  prompt: |
+    "TDD mode off. Agents will work in their natural order again.
+    Existing tests are still there — we're just not enforcing
+    test-first going forward."
+
+affected_agents:
+  code:
+    when_tdd_on: |
+      Will not write implementation until /test has written tests first.
+      If /code is called without tests existing, redirects to /test.
+
+  test:
+    when_tdd_on: |
+      Runs before /code for every new feature.
+      Tests define expected behavior — not existing code.
+
+  debug:
+    when_tdd_on: |
+      Confirms test coverage after every fix before closing.
+      Will not mark a fix as complete if tests are missing or failing.
+
+guardrails:
+  - This mode can be toggled at any point in the project
+  - Toggling off does not delete existing tests
+  - Toggling on does not retroactively require tests for existing code
+    unless the user explicitly asks for a coverage audit
